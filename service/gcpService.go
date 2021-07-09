@@ -74,11 +74,24 @@ func (sc *gcpStorageService) UploadFile(req *http.Request,file multipart.File, f
 	if _, err := io.Copy(obj, file); err != nil {
 		return nil,err
 	}
+
+	// Either
+	// obj.Metadata = map[string]string{
+	// 	"x-goog-acl":"public-read",
+	// }
+
+	// or use access control list for given object
+	acl := bucket.Object(obj.Name).ACL() 
 	
 	// close the object
 	if err := obj.Close(); err != nil {
 		return nil,err
 	}
 	
+	// ...or continued
+	// set access control list to give any user the permission to view the uploaded file
+	if err := acl.Set(ctx, storage.AllUsers, storage.RoleReader); err != nil {
+		return nil, err
+	}
 	return url.Parse(googleStorage + bucketName + "/" + obj.Attrs().Name) // complete url to access the uploaded file
 }
